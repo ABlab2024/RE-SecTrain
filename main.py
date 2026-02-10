@@ -32,67 +32,13 @@ if "clicked" in query_params and query_params["clicked"] == "true":
         if dm.log_click(tracking_id):
             st.toast("Click recorded in your training history.", icon="📝")
 
-    # Load and display the static warning page
-    try:
-        with open("phishing_training_page/index.html", "r", encoding="utf-8") as f:
-            html_content = f.read()
-        
-        with open("phishing_training_page/style.css", "r", encoding="utf-8") as f:
-            css_content = f.read()
-            
-        # Load the vulnerability report if available
-        report_content = "<h3>Report Not Found</h3><p>Could not load or generate the vulnerability report.</p>"
-        
-        # Try to load from file first
-        if tracking_id and os.path.exists(f"phishing_training_page/reports/{tracking_id}.html"):
-            try:
-                with open(f"phishing_training_page/reports/{tracking_id}.html", "r", encoding="utf-8") as f:
-                    report_content = f.read()
-            except Exception as e:
-                print(f"Error reading report file: {e}")
-        
-        # Fallback: Generate report if interest/topic is available in params
-        elif interest_param:
-            try:
-                # Need to initialize LLM client here if not already initialized (it is initialized later in the script) 
-                # Since this block is at the top, we need to init LLM temporarily or refactor.
-                # However, to keep it simple, we assume the user has logged in and API key is in session state or secrets.
-                # But wait, LLM client initialization requires API key which is in sidebar.
-                # The sidebar code runs AFTER this block. 
-                # We need to move LLM initialization earlier or duplicate it.
-                # Let's try to get API key from session state if available or proceed without report if not.
-                
-                # Check for API key in session state or secrets
-                api_key = st.session_state.get("api_key") or st.secrets.get("GEMINI_API_KEY") 
-                # Note: Currently API key is in a local variable in sidebar, so session_state might not have it yet on first load if not persisted.
-                # However, for the fallback, we need the LLM client.
-                
-                # Simplest fix: Just display a message if we can't generate it yet, or try best effort.
-                if api_key:
-                     driver_map = {"GEMINI": "google", "GPT": "openai", "CLAUDE": "anthropic"}
-                     # Default to google/gemini if not specified
-                     llm_provider = st.session_state.get("llm_provider", "GEMINI")
-                     temp_llm_client = LLMClient(provider=driver_map.get(llm_provider, "google"), api_key=api_key)
-                     report_content = temp_llm_client.generate_vulnerability_report(urllib.parse.unquote(interest_param))
-                else: 
-                     report_content = f"<h3>Report Pending</h3><p>Please login to the main dashboard to view the full report on '{interest_param}'.</p>"
-            except Exception as e:
-                report_content = f"<p>Error generating report: {str(e)}</p>"
-
-        # Inject report into HTML
-        html_content = html_content.replace("{{THREAT_REPORT}}", report_content)
-
-        # Combine HTML and CSS
-        full_html = f"<style>{css_content}</style>{html_content}"
-        
-        # Render the static page
-        # Using height=1000 to ensure it covers most screens, scrolling allowed
-        st.components.v1.html(full_html, height=1000, scrolling=True)
-        
-    except FileNotFoundError:
-        st.error("Training page files not found. Please check 'phishing_training_page' directory.")
-        
-    st.stop() # Stop execution of the main app
+    # Redirect to the external training page
+    external_url = "https://simulwarning.netlify.app/"
+    
+    st.markdown(f'<meta http-equiv="refresh" content="0;url={external_url}">', unsafe_allow_html=True)
+    st.write(f"Redirecting to training page... [Click here if not redirected]({external_url})")
+    time.sleep(1)
+    st.stop()
 
 # --- 2. Sidebar & Configuration ---
 with st.sidebar:
@@ -203,7 +149,9 @@ with tab2:
                     
                     # Construct tracking link - configurable via secrets.toml for deployment
                     # In Streamlit Cloud, add BASE_URL = "https://your-app.streamlit.app" to secrets
-                    base_url = "https://simulwarning.netlify.app"
+                    base_url = "http://localhost:8501"
+                    if "BASE_URL" in st.secrets:
+                        base_url = st.secrets["BASE_URL"]
                     
                     encoded_interest = urllib.parse.quote(interest)
                     tracking_link = f"{base_url}/?clicked=true&tracking_id={tracking_id}&interest={encoded_interest}"
