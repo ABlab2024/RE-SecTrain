@@ -3,6 +3,7 @@ import time
 from utils.data_manager import DataManager
 from utils.llm_client import LLMClient
 from utils.email_sender import send_email
+import streamlit.components.v1 as components
 import uuid
 
 # Page Config
@@ -20,29 +21,30 @@ dm = DataManager()
 # Check if the user arrived via a phishing link
 query_params = st.query_params
 if "clicked" in query_params and query_params["clicked"] == "true":
-    st.error("🚨 Security Alert! You clicked a simulated phishing link.")
-    
     # Log the click if tracking_id is present
     tracking_id = query_params.get("tracking_id", None)
     if tracking_id:
         if dm.log_click(tracking_id):
             st.toast("Click recorded in your training history.", icon="📝")
-    
-    st.markdown("""
-    ### 🛑 This was a simulation.
-    If this were a real attack, your device could have been compromised.
-    
-    **What to look for:**
-    - Check the sender's email address carefully.
-    - Hover over links before clicking to see the actual URL.
-    - Be wary of urgent or threatening language.
-    """)
-    
-    if st.button("Return to Dashboard"):
-        st.query_params.clear()
-        st.rerun()
-    
-    st.image("assets/warning_image.png", caption="Phishing Warning") 
+
+    # Load and display the static warning page
+    try:
+        with open("phishing_training_page/index.html", "r", encoding="utf-8") as f:
+            html_content = f.read()
+        
+        with open("phishing_training_page/style.css", "r", encoding="utf-8") as f:
+            css_content = f.read()
+            
+        # Combine HTML and CSS
+        full_html = f"<style>{css_content}</style>{html_content}"
+        
+        # Render the static page
+        # Using height=1000 to ensure it covers most screens, scrolling allowed
+        st.components.v1.html(full_html, height=1000, scrolling=True)
+        
+    except FileNotFoundError:
+        st.error("Training page files not found. Please check 'phishing_training_page' directory.")
+        
     st.stop() # Stop execution of the main app
 
 # --- 2. Sidebar & Configuration ---
