@@ -32,12 +32,44 @@ if "clicked" in query_params and query_params["clicked"] == "true":
         if dm.log_click(tracking_id):
             st.toast("Click recorded in your training history.", icon="📝")
 
-    # Redirect to the external training page
-    external_url = "https://simulwarning.netlify.app/"
-    
-    st.markdown(f'<meta http-equiv="refresh" content="0;url={external_url}">', unsafe_allow_html=True)
-    st.write(f"Redirecting to training page... [Click here if not redirected]({external_url})")
-    time.sleep(1)
+    # Display the training page directly
+    try:
+        # 1. Load the report content
+        report_path = f"phishing_training_page/reports/{tracking_id}.html"
+        if os.path.exists(report_path):
+            with open(report_path, "r", encoding="utf-8") as f:
+                report_content = f.read()
+        else:
+            report_content = f"""
+            <div style='text-align: center; color: #cbd5e1; padding: 20px;'>
+                <h2>Report Not Found</h2>
+                <p>Could not find the specific analysis for this simulation (ID: {tracking_id}).</p>
+                <p>This mimics a real phishing scenario targeting: <strong>{interest_param}</strong></p>
+            </div>
+            """
+
+        # 2. Load the base HTML template
+        with open("phishing_training_page/index.html", "r", encoding="utf-8") as f:
+            html_template = f.read()
+        
+        # 3. Load CSS
+        with open("phishing_training_page/style.css", "r", encoding="utf-8") as f:
+            css_content = f.read()
+            
+        # 4. Inject content
+        # Replace CSS link with actual styles
+        full_html = html_template.replace('<link rel="stylesheet" href="style.css">', f'<style>{css_content}</style>')
+        
+        # Inject the report
+        full_html = full_html.replace('{{THREAT_REPORT}}', report_content)
+        
+        # 5. Display
+        # Use components.html to render the full page in an iframe
+        components.html(full_html, height=1200, scrolling=True)
+        
+    except Exception as e:
+        st.error(f"Error loading training page: {e}")
+        
     st.stop()
 
 # --- 2. Sidebar & Configuration ---
