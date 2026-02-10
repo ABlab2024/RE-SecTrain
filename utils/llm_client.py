@@ -24,7 +24,7 @@ class LLMClient:
         """
         Searches for recent security issues related to the interest.
         """
-        prompt = f"Find 3 recent security threats, vulnerabilities, or phishing trends related to '{interest}' in South Korea or globally. Summarize them briefly."
+        prompt = f"Find 3 recent security threats, vulnerabilities, or phishing trends related to '{interest}' in South Korea or globally. Summarize them briefly in Korean. For each item, strictly provide a clickable source link (URL) so users can verify the news. Format the output as Markdown."
 
         try:
             if self.provider == "google":
@@ -61,10 +61,11 @@ class LLMClient:
 
         Create a realistic phishing email simulation to train employees.
         The email should appear to be from a legitimate source related to the threat (e.g., IT support, Service Provider).
+        The entire content (Subject and Body) must be in Korean.
         
         Return the output strictly as a JSON object with two keys:
-        - "subject": The email subject line.
-        - "body": The email body in HTML format. (Do NOT consist of ```html ... ```, just the raw HTML content).
+        - "subject": The email subject line in Korean.
+        - "body": The email body in HTML format in Korean. (Do NOT consist of ```html ... ```, just the raw HTML content).
         
         Do not include the tracking link placeholder, just the main content.
         Do not include markdown formatting like ```json or ```.
@@ -107,3 +108,58 @@ class LLMClient:
 
         except Exception as e:
             return {"subject": "Error Generation", "body": f"Failed to generate scenario: {str(e)}"}
+
+    def generate_vulnerability_report(self, threat_type):
+        """
+        Generates a detailed vulnerability report including analysis and prevention.
+        Returns HTML content.
+        """
+        prompt = f"""
+        Analyze the security threat related to '{threat_type}'. 
+        Provide a detailed vulnerability report including:
+        1. Threat Analysis (What is it? How does it work?)
+        2. Impact (What happens if successful?)
+        3. Prevention Methods (Detailed steps to avoid it).
+        
+        Write in Korean.
+        Format the output as HTML suitable for embedding in a div. 
+        Use <h2> for main sections, <h3> for subsections, and <ul>/<li> for lists.
+        Do NOT include <html>, <head>, or <body> tags. just the inner HTML.
+        Make it visually appealing with simple styling classes if needed, but rely on semantic HTML.
+        """
+
+        try:
+            content = ""
+            if self.provider == "google":
+                response = self.client.models.generate_content(
+                    model=self.model_name,
+                    contents=prompt
+                )
+                content = response.text
+            elif self.provider == "openai":
+                response = self.client.chat.completions.create(
+                    model="gpt-4o",
+                    messages=[{"role": "user", "content": prompt}]
+                )
+                content = response.choices[0].message.content
+            elif self.provider == "anthropic":
+                response = self.client.messages.create(
+                    model="claude-3-5-sonnet-20240620",
+                    max_tokens=1500,
+                    messages=[{"role": "user", "content": prompt}]
+                )
+                content = response.content[0].text
+
+            # Clean up markdown code blocks if present
+            content = content.strip()
+            if content.startswith("```html"):
+                content = content[7:]
+            if content.startswith("```"):
+                content = content[3:]
+            if content.endswith("```"):
+                content = content[:-3]
+            
+            return content
+
+        except Exception as e:
+            return f"<p>Report generation failed: {str(e)}</p>"

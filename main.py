@@ -5,6 +5,8 @@ from utils.llm_client import LLMClient
 from utils.email_sender import send_email
 import streamlit.components.v1 as components
 import uuid
+import os
+import urllib.parse
 
 # Page Config
 st.set_page_config(
@@ -22,7 +24,10 @@ dm = DataManager()
 query_params = st.query_params
 if "clicked" in query_params and query_params["clicked"] == "true":
     # Log the click if tracking_id is present
+    print(f"DEBUG: Processing Click - Params: {query_params}")
     tracking_id = query_params.get("tracking_id", None)
+    interest_param = query_params.get("interest", None)
+    
     if tracking_id:
         if dm.log_click(tracking_id):
             st.toast("Click recorded in your training history.", icon="📝")
@@ -35,6 +40,48 @@ if "clicked" in query_params and query_params["clicked"] == "true":
         with open("phishing_training_page/style.css", "r", encoding="utf-8") as f:
             css_content = f.read()
             
+        # Load the vulnerability report if available
+        report_content = "<h3>Report Not Found</h3><p>Could not load or generate the vulnerability report.</p>"
+        
+        # Try to load from file first
+        if tracking_id and os.path.exists(f"phishing_training_page/reports/{tracking_id}.html"):
+            try:
+                with open(f"phishing_training_page/reports/{tracking_id}.html", "r", encoding="utf-8") as f:
+                    report_content = f.read()
+            except Exception as e:
+                print(f"Error reading report file: {e}")
+        
+        # Fallback: Generate report if interest/topic is available in params
+        elif interest_param:
+            try:
+                # Need to initialize LLM client here if not already initialized (it is initialized later in the script) 
+                # Since this block is at the top, we need to init LLM temporarily or refactor.
+                # However, to keep it simple, we assume the user has logged in and API key is in session state or secrets.
+                # But wait, LLM client initialization requires API key which is in sidebar.
+                # The sidebar code runs AFTER this block. 
+                # We need to move LLM initialization earlier or duplicate it.
+                # Let's try to get API key from session state if available or proceed without report if not.
+                
+                # Check for API key in session state or secrets
+                api_key = st.session_state.get("api_key") or st.secrets.get("GEMINI_API_KEY") 
+                # Note: Currently API key is in a local variable in sidebar, so session_state might not have it yet on first load if not persisted.
+                # However, for the fallback, we need the LLM client.
+                
+                # Simplest fix: Just display a message if we can't generate it yet, or try best effort.
+                if api_key:
+                     driver_map = {"GEMINI": "google", "GPT": "openai", "CLAUDE": "anthropic"}
+                     # Default to google/gemini if not specified
+                     llm_provider = st.session_state.get("llm_provider", "GEMINI")
+                     temp_llm_client = LLMClient(provider=driver_map.get(llm_provider, "google"), api_key=api_key)
+                     report_content = temp_llm_client.generate_vulnerability_report(urllib.parse.unquote(interest_param))
+                else: 
+                     report_content = f"<h3>Report Pending</h3><p>Please login to the main dashboard to view the full report on '{interest_param}'.</p>"
+            except Exception as e:
+                report_content = f"<p>Error generating report: {str(e)}</p>"
+
+        # Inject report into HTML
+        html_content = html_content.replace("{{THREAT_REPORT}}", report_content)
+
         # Combine HTML and CSS
         full_html = f"<style>{css_content}</style>{html_content}"
         
@@ -63,7 +110,7 @@ with st.sidebar:
     
     # LLM Settings
     st.subheader("⚙️ AI Settings")
-    llm_provider = st.selectbox("LLM Provider", ["google", "openai", "anthropic"])
+    llm_provider = st.selectbox("LLM Provider", ["GEMINI", "GPT", "CLAUDE"])
     api_key = st.text_input("API Key", type="password")
     
     st.divider()
@@ -80,8 +127,9 @@ if not api_key:
     # Allow proceeding for demo purposes if needed, but core features wont work
 else:
     # Initialize LLM Client
+    driver_map = {"GEMINI": "google", "GPT": "openai", "CLAUDE": "anthropic"}
     try:
-        llm_client = LLMClient(provider=llm_provider, api_key=api_key)
+        llm_client = LLMClient(provider=driver_map.get(llm_provider, "google"), api_key=api_key)
     except Exception as e:
         st.error(f"Failed to initialize LLM: {str(e)}")
         st.stop()
@@ -155,12 +203,25 @@ with tab2:
                     
                     # Construct tracking link - configurable via secrets.toml for deployment
                     # In Streamlit Cloud, add BASE_URL = "https://your-app.streamlit.app" to secrets
-                    base_url = "http://localhost:8501"
-                    if "BASE_URL" in st.secrets:
-                        base_url = st.secrets["BASE_URL"]
+                    base_url = "https://simulwarning.netlify.app"
                     
-                    tracking_link = f"{base_url}/?clicked=true&tracking_id={tracking_id}"
+                    encoded_interest = urllib.parse.quote(interest)
+                    tracking_link = f"{base_url}/?clicked=true&tracking_id={tracking_id}&interest={encoded_interest}"
                     
+                    # Generate and save vulnerability report
+                    try:
+                        status_text.text("📝 Generating vulnerability report...")
+                        report_content = llm_client.generate_vulnerability_report(interest)
+                        
+                        # Ensure directory exists
+                        os.makedirs("phishing_training_page/reports", exist_ok=True)
+                        
+                        with open(f"phishing_training_page/reports/{tracking_id}.html", "w", encoding="utf-8") as f:
+                            f.write(report_content)
+                            
+                    except Exception as e:
+                        st.warning(f"Failed to generate report: {e}")
+
                     success, msg = send_email(target_email, scenario['subject'], scenario['body'], tracking_link)
                     
                     if success:

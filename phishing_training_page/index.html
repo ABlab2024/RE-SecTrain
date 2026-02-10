@@ -41,61 +41,9 @@
             </p>
         </section>
 
-        <!-- Threats Section -->
-        <section class="threats-section">
-            <h2>🚨 실제 상황이었다면 발생했을 위협</h2>
-            <div class="card-grid">
-                <div class="card glass-panel">
-                    <div class="card-icon">💻</div>
-                    <h3>악성코드 감염</h3>
-                    <p>PC가 랜섬웨어나 악성코드에 감염되어 중요한 파일이 암호화되거나 삭제될 수 있습니다.</p>
-                </div>
-                <div class="card glass-panel">
-                    <div class="card-icon">🔑</div>
-                    <h3>계정 정보 탈취</h3>
-                    <p>가짜 로그인 페이지로 유도하여 아이디와 비밀번호를 입력하게 만들어 계정을 탈취합니다.</p>
-                </div>
-                <div class="card glass-panel">
-                    <div class="card-icon">🏢</div>
-                    <h3>내부 네트워크 침투</h3>
-                    <p>감염된 PC를 통해 사내 네트워크 전체로 공격이 확산되어 심각한 피해를 입힐 수 있습니다.</p>
-                </div>
-            </div>
-        </section>
-
-        <!-- Prevention Section -->
-        <section class="prevention-section glass-panel">
-            <h2>🛡️ 의심스러운 메일을 받았을 때 체크리스트</h2>
-            <ul class="checklist">
-                <li>
-                    <span class="check-icon">✓</span>
-                    <div class="check-content">
-                        <strong>보낸 사람 확인</strong>
-                        <span>이름만 보지 말고 실제 이메일 주소(@domain.com)가 정확한지 확인하세요.</span>
-                    </div>
-                </li>
-                <li>
-                    <span class="check-icon">✓</span>
-                    <div class="check-content">
-                        <strong>링크 주소 확인</strong>
-                        <span>링크를 클릭하기 전에 마우스를 올려 실제 연결되는 URL 주소를 확인하세요.</span>
-                    </div>
-                </li>
-                <li>
-                    <span class="check-icon">✓</span>
-                    <div class="check-content">
-                        <strong>첨부파일 주의</strong>
-                        <span>출처가 불분명한 첨부파일은 절대 실행하지 마세요. 특히 .exe, .zip 파일은 위험합니다.</span>
-                    </div>
-                </li>
-                <li>
-                    <span class="check-icon">✓</span>
-                    <div class="check-content">
-                        <strong>긴급 요청 의심</strong>
-                        <span>"즉시 확인", "계정 정지" 등 불안감을 조성하여 클릭을 유도하는 내용은 의심하세요.</span>
-                    </div>
-                </li>
-            </ul>
+        <!-- Dynamic Threat Report Section -->
+        <section class="report-section glass-panel">
+            {{THREAT_REPORT}}
         </section>
 
         <!-- Action Section -->
