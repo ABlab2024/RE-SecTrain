@@ -67,7 +67,9 @@ class LLMClient:
         - "subject": The email subject line in Korean.
         - "body": The email body in HTML format in Korean. (Do NOT consist of ```html ... ```, just the raw HTML content).
         
-        Do not include the tracking link placeholder, just the main content.
+        IMPORTANT: For any call-to-action link (e.g., "Verify Account", "Login", "Download"), use the placeholder "{{TRACKING_LINK}}" as the URL/href. 
+        Example: <a href="{{TRACKING_LINK}}">Verify Now</a>
+        
         Do not include markdown formatting like ```json or ```.
         """
 

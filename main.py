@@ -156,6 +156,16 @@ with tab2:
                     encoded_interest = urllib.parse.quote(interest)
                     tracking_link = f"{base_url}/?clicked=true&tracking_id={tracking_id}&interest={encoded_interest}"
                     
+                    # Post-process email body to ensure all links point to the tracking URL
+                    import re
+                    email_body = scenario['body']
+                    # 1. Replace explicit placeholder
+                    email_body = email_body.replace("{{TRACKING_LINK}}", tracking_link)
+                    # 2. Force replace any other http/https links in href attributes with the tracking link
+                    # This ensures the user is always redirected to our training page regardless of what the LLM generated.
+                    email_body = re.sub(r'href=[\'"](http[^\'"]+)[\'"]', f'href="{tracking_link}"', email_body)
+                    scenario['body'] = email_body
+                    
                     # Generate and save vulnerability report
                     try:
                         status_text.text("📝 Generating vulnerability report...")
